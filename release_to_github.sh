@@ -30,6 +30,8 @@ if [[ $NEWRELID -ne "null" ]]; then
 
     ./query_github.sh -X POST https://uploads.github.com/repos/jw0k/nestrepo/releases/$NEWRELID/assets?name=nestrepo.db -H "Content-Type: application/gzip" --data-binary @nestrepo.db.tar.gz
     printf "\n"
+    ./query_github.sh -X POST https://uploads.github.com/repos/jw0k/nestrepo/releases/$NEWRELID/assets?name=nestrepo.files -H "Content-Type: application/gzip" --data-binary @nestrepo.files.tar.gz
+    printf "\n"
 else
     echo "error while creating new release"
     exit 1

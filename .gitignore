@@ -1,0 +1,8 @@
+*
+
+!.gitignore
+!networkmanager_auto/PKGBUILD
+!query_github.sh
+!release.json
+!release_to_github.json
+
