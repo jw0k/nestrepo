@@ -1,0 +1,8 @@
+{
+    "tag_name": "current",
+    "target_commitish": "master",
+    "name": "current",
+    "body": "Current release",
+    "draft": false,
+    "prerelease": false
+}
