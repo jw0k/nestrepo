@@ -2,6 +2,8 @@
 
 !.gitignore
 !networkmanager_auto/PKGBUILD
+!sxiv-large/PKGBUILD
+!sxiv-large/myconfig.def.h
 !query_github.sh
 !release.json
 !release_to_github.json
