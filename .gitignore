@@ -6,5 +6,6 @@
 !sxiv-large/myconfig.def.h
 !query_github.sh
 !release.json
-!release_to_github.json
+!release_to_github.sh
+!check_for_new_versions.sh
 
