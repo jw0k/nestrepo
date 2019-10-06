@@ -8,4 +8,6 @@
 !release.json
 !release_to_github.sh
 !check_for_new_versions.sh
+!show_diff.sh
+!README.md
 
