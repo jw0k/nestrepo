@@ -2,7 +2,7 @@
 
 get_version()
 {
-    pacman -Si $1 | grep ^Version | awk '{ print $NF }'
+    yay -Si $1 | grep ^Version | awk '{ print $NF }'
 }
 
 compare_versions()
