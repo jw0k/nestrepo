@@ -11,8 +11,7 @@ nestrepo_package="$2"
 
 mkdir temp_pkg
 cd temp_pkg
-asp update $vanilla_package > /dev/null 2>&1
-asp export $vanilla_package > /dev/null 2>&1
+yay -G ${vanilla_package} > /dev/null 2>&1
 cd ..
 diff --color temp_pkg/${vanilla_package}/PKGBUILD ${nestrepo_package}/PKGBUILD
 
