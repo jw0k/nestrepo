@@ -6,6 +6,7 @@ Modified Arch packages.
 
 - networkmanager_auto - keeps trying to connect to WiFi even if it is stared before gnome-keyring
 - sxiv-large - sxiv configured to display large thumbnails
+- polybar-correct-time - polybar compiled with clang (resolves time module issues)
 
 ## Configuration
 
