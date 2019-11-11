@@ -16,3 +16,4 @@ compare_versions()
 
 compare_versions "sxiv" "sxiv-large"
 compare_versions "networkmanager" "networkmanager_auto"
+compare_versions "polybar" "polybar-correct-time"

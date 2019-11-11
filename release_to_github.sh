@@ -18,7 +18,7 @@ NEWRELID=$(./query_github.sh -X POST -H "Content-Type: application/json" -d @rel
 if [[ $NEWRELID -ne "null" ]]; then
     echo "uploading assets..."
 
-    FILES=$(ls networkmanager_auto/*.pkg.tar.xz sxiv-large/*.pkg.tar.xz)
+    FILES=$(ls networkmanager_auto/*.pkg.tar.xz sxiv-large/*.pkg.tar.xz polybar-correct-time/*.pkg.tar.xz)
 
     rm nestrepo.db.tar.gz
     rm nestrepo.files.tar.gz

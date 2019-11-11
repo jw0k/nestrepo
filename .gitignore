@@ -4,6 +4,8 @@
 !networkmanager_auto/PKGBUILD
 !sxiv-large/PKGBUILD
 !sxiv-large/myconfig.def.h
+!polybar-correct-time/PKGBUILD
+!polybar-correct-time/polybar.install
 !query_github.sh
 !release.json
 !release_to_github.sh
