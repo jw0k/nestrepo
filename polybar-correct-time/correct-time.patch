@@ -1,0 +1,665 @@
+From 2792f58900d3836dbc51e55fede05a7691b6808a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=A9r=C3=B4me=20BOULMIER?= <jerome.boulmier@outlook.fr>
+Date: Wed, 3 Apr 2019 14:20:20 -0400
+Subject: [PATCH] fix(sleep): add monotonic condition variable
+
+---
+ cmake/03-libs.cmake                  |  10 ++
+ cmake/modules/Findrt.cmake           |  18 +++
+ include/adapters/mpd.hpp             |   2 +-
+ include/adapters/net.hpp             |   2 +-
+ include/components/controller.hpp    |   2 +-
+ include/components/taskqueue.hpp     |   8 +-
+ include/drawtypes/animation.hpp      |   4 +-
+ include/modules/battery.hpp          |   2 +-
+ include/modules/meta/base.hpp        |  27 ++---
+ include/modules/meta/base.inl        |   4 +-
+ include/modules/mpd.hpp              |   2 +-
+ include/settings.hpp.cmake           |   5 +
+ include/utils/condition_variable.hpp | 161 +++++++++++++++++++++++++++
+ src/CMakeLists.txt                   |   4 +
+ src/adapters/mpd.cpp                 |   2 +-
+ src/adapters/net.cpp                 |   2 +-
+ src/components/controller.cpp        |   4 +-
+ src/components/taskqueue.cpp         |  10 +-
+ src/drawtypes/animation.cpp          |   2 +-
+ src/modules/battery.cpp              |   6 +-
+ src/modules/mpd.cpp                  |   4 +-
+ 21 files changed, 240 insertions(+), 41 deletions(-)
+ create mode 100644 cmake/modules/Findrt.cmake
+ create mode 100644 include/utils/condition_variable.hpp
+
+diff --git a/cmake/03-libs.cmake b/cmake/03-libs.cmake
+index fc879f10c..bd46afc2b 100644
+--- a/cmake/03-libs.cmake
++++ b/cmake/03-libs.cmake
+@@ -31,3 +31,14 @@ querylib(WITH_XCURSOR "pkg-config" xcb-cursor libs dirs)
+ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+   querylib(TRUE "pkg-config" libinotify libs dirs)
+ endif()
++
++include(CheckLibraryExists)
++include(CheckSymbolExists)
++check_symbol_exists(clock_gettime "time.h" HAVE_CLOCK_GETTIME)
++
++if (NOT HAVE_CLOCK_GETTIME)
++  # Before glibc 2.17 clock_gettime is in rt library
++  CHECK_LIBRARY_EXISTS(rt clock_gettime "time.h" WITH_RT)
++  set(HAVE_CLOCK_GETTIME ${WITH_RT})
++  find_package(rt REQUIRED)
++endif()
+diff --git a/cmake/modules/Findrt.cmake b/cmake/modules/Findrt.cmake
+new file mode 100644
+index 000000000..0b56d2279
+--- /dev/null
++++ b/cmake/modules/Findrt.cmake
+@@ -0,0 +1,18 @@
++
++find_path(LIBRT_INCLUDE_DIRS
++  NAMES time.h
++  PATHS ${LIBRT_ROOT}/include/
++  )
++find_library(LIBRT_LIBRARIES rt)
++include(FindPackageHandleStandardArgs)
++find_package_handle_standard_args(LibRt DEFAULT_MSG LIBRT_LIBRARIES LIBRT_INCLUDE_DIRS)
++mark_as_advanced(LIBRT_INCLUDE_DIRS LIBRT_LIBRARIES)
++
++if(LIBRT_FOUND)
++  if(NOT TARGET librt::librt)
++    add_library(librt::librt UNKNOWN IMPORTED)
++    set_target_properties(librt::librt PROPERTIES
++      IMPORTED_LOCATION "${LIBRT_LIBRARIES}"
++      INTERFACE_INCLUDE_DIRECTORIES "${LIBRT_INCLUDE_DIRS}")
++  endif()
++endif()
+diff --git a/include/adapters/mpd.hpp b/include/adapters/mpd.hpp
+index 2a152b01c..88a67dda6 100644
+--- a/include/adapters/mpd.hpp
++++ b/include/adapters/mpd.hpp
+@@ -162,7 +162,7 @@ namespace mpd {
+     mpd_status_t m_status{};
+     unique_ptr<mpdsong> m_song{};
+     mpdstate m_state{mpdstate::UNKNOWN};
+-    chrono::system_clock::time_point m_updated_at{};
++    chrono::steady_clock::time_point m_updated_at{};
+ 
+     bool m_random{false};
+     bool m_repeat{false};
+diff --git a/include/adapters/net.hpp b/include/adapters/net.hpp
+index 97d6d3918..e5f2228b2 100644
+--- a/include/adapters/net.hpp
++++ b/include/adapters/net.hpp
+@@ -58,7 +58,7 @@ namespace net {
+   struct link_activity {
+     bytes_t transmitted{0};
+     bytes_t received{0};
+-    std::chrono::system_clock::time_point time;
++    std::chrono::steady_clock::time_point time;
+   };
+ 
+   struct link_status {
+diff --git a/include/components/controller.hpp b/include/components/controller.hpp
+index cf7c66820..752adc0d4 100644
+--- a/include/components/controller.hpp
++++ b/include/components/controller.hpp
+@@ -128,7 +128,7 @@ class controller : public signal_receiver<SIGN_PRIORITY_CONTROLLER, signals::eve
+   /**
+    * \brief Time of last handled input event
+    */
+-  std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> m_lastinput;
++  std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds> m_lastinput;
+ 
+   /**
+    * \brief Input data
+diff --git a/include/components/taskqueue.hpp b/include/components/taskqueue.hpp
+index d693b6377..2d6ee8061 100644
+--- a/include/components/taskqueue.hpp
++++ b/include/components/taskqueue.hpp
+@@ -2,12 +2,12 @@
+ 
+ #include <atomic>
+ #include <chrono>
+-#include <condition_variable>
+ #include <mutex>
+ #include <thread>
+ 
+ #include "common.hpp"
+ #include "utils/mixins.hpp"
++#include "utils/condition_variable.hpp"
+ 
+ POLYBAR_NS
+ 
+@@ -17,13 +17,13 @@ using namespace std::chrono_literals;
+ class taskqueue : non_copyable_mixin<taskqueue> {
+  public:
+   struct deferred {
+-    using clock = chrono::high_resolution_clock;
++    using clock = chrono::steady_clock;
+     using duration = chrono::milliseconds;
+     using timepoint = chrono::time_point<clock, duration>;
+     using callback = function<void(size_t remaining)>;
+ 
+     explicit deferred(string id, timepoint now, duration wait, callback fn, size_t count)
+-        : id(move(id)), func(move(fn)), now(move(now)), wait(move(wait)), count(move(count)) {}
++        : id(move(id)), func(move(fn)), now(now), wait(wait), count(count) {}
+ 
+     const string id;
+     const callback func;
+@@ -53,7 +53,7 @@ class taskqueue : non_copyable_mixin<taskqueue> {
+  private:
+   std::thread m_thread;
+   std::mutex m_lock{};
+-  std::condition_variable m_hold;
++  condition_variable m_hold;
+   std::atomic_bool m_active{true};
+ 
+   vector<unique_ptr<deferred>> m_deferred;
+diff --git a/include/drawtypes/animation.hpp b/include/drawtypes/animation.hpp
+index 22aa7d582..24db5233d 100644
+--- a/include/drawtypes/animation.hpp
++++ b/include/drawtypes/animation.hpp
+@@ -19,7 +19,7 @@ namespace drawtypes {
+         : m_frames(forward<decltype(frames)>(frames))
+         , m_framerate_ms(framerate_ms)
+         , m_framecount(m_frames.size())
+-        , m_lastupdate(chrono::system_clock::now()) {}
++        , m_lastupdate(chrono::steady_clock::now()) {}
+ 
+     void add(icon_t&& frame);
+     icon_t get();
+@@ -33,7 +33,7 @@ namespace drawtypes {
+     int m_framerate_ms = 1000;
+     int m_frame = 0;
+     int m_framecount = 0;
+-    chrono::system_clock::time_point m_lastupdate;
++    chrono::steady_clock::time_point m_lastupdate;
+   };
+ 
+   using animation_t = shared_ptr<animation>;
+diff --git a/include/modules/battery.hpp b/include/modules/battery.hpp
+index 94036e326..c3ff561ac 100644
+--- a/include/modules/battery.hpp
++++ b/include/modules/battery.hpp
+@@ -102,7 +102,7 @@ namespace modules {
+     string m_timeformat;
+     size_t m_unchanged{SKIP_N_UNCHANGED};
+     chrono::duration<double> m_interval{};
+-    chrono::system_clock::time_point m_lastpoll;
++    chrono::steady_clock::time_point m_lastpoll;
+     thread m_subthread;
+   };
+ }
+diff --git a/include/modules/meta/base.hpp b/include/modules/meta/base.hpp
+index 3d2f5b718..cd88d7464 100644
+--- a/include/modules/meta/base.hpp
++++ b/include/modules/meta/base.hpp
+@@ -2,14 +2,15 @@
+ 
+ #include <algorithm>
+ #include <chrono>
+-#include <condition_variable>
+ #include <map>
+ #include <mutex>
++#include <utility>
+ 
+ #include "common.hpp"
+ #include "components/types.hpp"
+ #include "errors.hpp"
+ #include "utils/concurrency.hpp"
++#include "utils/condition_variable.hpp"
+ #include "utils/functional.hpp"
+ #include "utils/inotify.hpp"
+ #include "utils/string.hpp"
+@@ -41,7 +42,7 @@ namespace drawtypes {
+   using icon_t = label_t;
+   class iconset;
+   using iconset_t = shared_ptr<iconset>;
+-}
++}  // namespace drawtypes
+ 
+ class builder;
+ class config;
+@@ -84,7 +85,7 @@ namespace modules {
+ 
+   class module_formatter {
+    public:
+-    explicit module_formatter(const config& conf, string modname) : m_conf(conf), m_modname(modname) {}
++    explicit module_formatter(const config& conf, string modname) : m_conf(conf), m_modname(move(modname)) {}
+ 
+     void add(string name, string fallback, vector<string>&& tags, vector<string>&& whitelist = {});
+     bool has(const string& tag, const string& format_name);
+@@ -103,7 +104,7 @@ namespace modules {
+ 
+   struct module_interface {
+    public:
+-    virtual ~module_interface() {}
++    virtual ~module_interface() = default;
+ 
+     virtual string name() const = 0;
+     virtual bool running() const = 0;
+@@ -120,15 +121,15 @@ namespace modules {
+   template <class Impl>
+   class module : public module_interface {
+    public:
+-    module(const bar_settings bar, string name);
+-    ~module() noexcept;
++    module(const bar_settings& bar, string name);
++    ~module() noexcept override;
+ 
+-    string name() const;
+-    bool running() const;
+-    void stop();
+-    void halt(string error_message);
++    string name() const override;
++    bool running() const override;
++    void stop() override;
++    void halt(string error_message) override;
+     void teardown();
+-    string contents();
++    string contents() override;
+ 
+    protected:
+     void broadcast();
+@@ -147,7 +148,7 @@ namespace modules {
+     mutex m_buildlock;
+     mutex m_updatelock;
+     mutex m_sleeplock;
+-    std::condition_variable m_sleephandler;
++    condition_variable m_sleephandler;
+ 
+     string m_name;
+     unique_ptr<builder> m_builder;
+@@ -164,6 +165,6 @@ namespace modules {
+   };
+ 
+   // }}}
+-}
++}  // namespace modules
+ 
+ POLYBAR_NS_END
+diff --git a/include/modules/meta/base.inl b/include/modules/meta/base.inl
+index 1845d1868..beef33ce6 100644
+--- a/include/modules/meta/base.inl
++++ b/include/modules/meta/base.inl
+@@ -11,12 +11,12 @@ namespace modules {
+   // module<Impl> public {{{
+ 
+   template <typename Impl>
+-  module<Impl>::module(const bar_settings bar, string name)
++  module<Impl>::module(const bar_settings& bar, string name)
+       : m_sig(signal_emitter::make())
+       , m_bar(bar)
+       , m_log(logger::make())
+       , m_conf(config::make())
+-      , m_name("module/" + name)
++      , m_name("module/" + move(name))
+       , m_builder(make_unique<builder>(bar))
+       , m_formatter(make_unique<module_formatter>(m_conf, m_name))
+       , m_handle_events(m_conf.get(m_name, "handle-events", true)) {}
+diff --git a/include/modules/mpd.hpp b/include/modules/mpd.hpp
+index c9e07257d..b411a2f8e 100644
+--- a/include/modules/mpd.hpp
++++ b/include/modules/mpd.hpp
+@@ -86,7 +86,7 @@ namespace modules {
+     string m_pass;
+     unsigned int m_port{6600U};
+ 
+-    chrono::system_clock::time_point m_lastsync{};
++    chrono::steady_clock::time_point m_lastsync{};
+     float m_synctime{1.0f};
+ 
+     int m_quick_attempts{0};
+diff --git a/include/settings.hpp.cmake b/include/settings.hpp.cmake
+index 474573268..de8fe3c1c 100644
+--- a/include/settings.hpp.cmake
++++ b/include/settings.hpp.cmake
+@@ -35,6 +35,9 @@
+ #cmakedefine01 WITH_XRM
+ #cmakedefine01 WITH_XCURSOR
+ 
++#cmakedefine01 WITH_RT
++#cmakedefine01 HAVE_CLOCK_GETTIME
++
+ #if WITH_XRANDR
+ #cmakedefine01 WITH_XRANDR_MONITORS
+ #else
+@@ -124,6 +127,8 @@ const auto print_build_info = [](bool extended = false) {
+       (WITH_XKB               ? '+' : '-'),
+       (WITH_XRM               ? '+' : '-'),
+       (WITH_XCURSOR           ? '+' : '-'));
++    printf("clock library: %crt\n",
++      (WITH_RT                ? '+' : '-'));
+     printf("\n");
+     printf("Build type: @CMAKE_BUILD_TYPE@\n");
+     printf("Compiler: @CMAKE_CXX_COMPILER@\n");
+diff --git a/include/utils/condition_variable.hpp b/include/utils/condition_variable.hpp
+new file mode 100644
+index 000000000..4dafd8ea9
+--- /dev/null
++++ b/include/utils/condition_variable.hpp
+@@ -0,0 +1,161 @@
++#pragma once
++
++#include "common.hpp"
++
++#if HAVE_CLOCK_GETTIME == 0
++#include <condition_variable>
++#else
++#include <mutex>
++#include <pthread.h>
++#endif
++
++POLYBAR_NS
++
++#if HAVE_CLOCK_GETTIME == 1
++
++namespace stl_replacement {
++  enum class cv_status { no_timeout, timeout };
++
++  class condition_variable {
++   public:
++    using native_handle_type = pthread_cond_t*;
++
++    condition_variable();
++    condition_variable(const condition_variable&) = delete;
++    ~condition_variable();
++
++    void notify_one() noexcept;
++
++    void notify_all() noexcept;
++
++    void wait(std::unique_lock<std::mutex>& lock);
++
++    template <typename Predicate>
++    void wait(std::unique_lock<std::mutex>& lock, Predicate pred);
++
++    template <typename Rep, typename Period>
++    cv_status wait_for(std::unique_lock<std::mutex>& lock, const std::chrono::duration<Rep, Period>& rel_time);
++
++    template <typename Rep, typename Period, typename Predicate>
++    bool wait_for(
++        std::unique_lock<std::mutex>& lock, const std::chrono::duration<Rep, Period>& rel_time, Predicate pred);
++
++    template <typename Clock, typename Duration>
++    cv_status wait_until(
++        std::unique_lock<std::mutex>& lock, const std::chrono::time_point<Clock, Duration>& timeout_time);
++
++    template <typename Clock, typename Duration, typename Pred>
++    bool wait_until(
++        std::unique_lock<std::mutex>& lock, const std::chrono::time_point<Clock, Duration>& timeout_time, Pred pred);
++
++    native_handle_type native_handle();
++
++   private:
++    pthread_condattr_t m_attr;
++    pthread_cond_t m_handle;
++  };
++
++  inline condition_variable::condition_variable() : m_attr{}, m_handle{} {
++    int result = pthread_condattr_init(&m_attr);
++    if (result != 0) {
++      throw std::system_error(std::error_code(result, std::generic_category()));
++    }
++
++    pthread_condattr_setclock(&m_attr, CLOCK_MONOTONIC);
++
++    result = pthread_cond_init(&m_handle, &m_attr);
++    if (result != 0) {
++      throw std::system_error(std::error_code(result, std::generic_category()));
++    }
++  }
++
++  inline condition_variable::~condition_variable() {
++    pthread_cond_destroy(&m_handle);
++    pthread_condattr_destroy(&m_attr);
++  }
++
++  inline void condition_variable::notify_one() noexcept {
++    pthread_cond_signal(&m_handle);
++  }
++
++  inline void condition_variable::notify_all() noexcept {
++    pthread_cond_broadcast(&m_handle);
++  }
++
++  inline void condition_variable::wait(std::unique_lock<std::mutex>& lock) {
++    pthread_cond_wait(&m_handle, lock.mutex()->native_handle());
++  }
++
++  template <typename Predicate>
++  void condition_variable::wait(std::unique_lock<std::mutex>& lock, Predicate pred) {
++    while (!pred()) {
++      wait(lock);
++    }
++  }
++
++  template <typename Rep, typename Period>
++  cv_status condition_variable::wait_for(
++      std::unique_lock<std::mutex>& lock, const std::chrono::duration<Rep, Period>& rel_time) {
++    auto steady_now = std::chrono::steady_clock::now();
++
++    auto ceiled = std::chrono::duration_cast<std::chrono::nanoseconds>(rel_time);
++    if (ceiled < rel_time) {
++      ++ceiled;
++    }
++
++    auto as_seconds = std::chrono::duration_cast<std::chrono::seconds>(ceiled);
++    auto ns = (ceiled - as_seconds);
++
++    timespec ts{};
++    clock_gettime(CLOCK_MONOTONIC, &ts);
++    ts.tv_sec += static_cast<decltype(ts.tv_sec)>(
++        as_seconds.count() + (ts.tv_nsec + ns.count()) /
++                             std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count());
++    ts.tv_nsec = static_cast<decltype(ts.tv_nsec)>(
++        (ts.tv_nsec + ns.count()) %
++        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count());
++
++    auto result = pthread_cond_timedwait(&m_handle, lock.mutex()->native_handle(), &ts);
++    if (result != ETIMEDOUT && result != 0) {
++      throw std::system_error(std::error_code(result, std::generic_category()));
++    }
++
++    return std::chrono::steady_clock::now() - steady_now < rel_time ? cv_status::no_timeout : cv_status::timeout;
++  }
++
++  template <typename Rep, typename Period, typename Predicate>
++  bool condition_variable::wait_for(
++      std::unique_lock<std::mutex>& lock, const std::chrono::duration<Rep, Period>& rel_time, Predicate pred) {
++    return wait_until(lock, rel_time, std::move(pred));
++  }
++
++  template <typename Clock, typename Duration>
++  cv_status condition_variable::wait_until(
++      std::unique_lock<std::mutex>& lock, const std::chrono::time_point<Clock, Duration>& timeout_time) {
++    wait_for(lock, timeout_time - Clock::now());
++    return Clock::now() < timeout_time ? cv_status::no_timeout : cv_status::timeout;
++  }
++
++  template <typename Clock, typename Duration, typename Pred>
++  bool condition_variable::wait_until(
++      std::unique_lock<std::mutex>& lock, const std::chrono::time_point<Clock, Duration>& timeout_time, Pred pred) {
++    while (!pred()) {
++      if (wait_until(lock, timeout_time) == cv_status::timeout) {
++        return pred();
++      }
++    }
++
++    return true;
++  }
++
++  inline condition_variable::native_handle_type condition_variable::native_handle() {
++    return &m_handle;
++  }
++}  // namespace stl_replacement
++
++using condition_variable = stl_replacement::condition_variable;
++#else
++using condition_variable = std::condition_variable;
++#endif
++
++POLYBAR_NS_END
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index ef6a2cb9e..f8d00ecab 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -72,6 +72,10 @@ endif()
+ add_library(poly STATIC ${files})
+ target_include_directories(poly PUBLIC ${dirs})
+ target_link_libraries(poly ${libs} Threads::Threads)
++if (WITH_RT)
++  target_link_libraries(poly librt::librt)
++endif()
++
+ target_compile_options(poly PUBLIC $<$<CXX_COMPILER_ID:GNU>:$<$<CONFIG:MinSizeRel>:-flto>>)
+ 
+ add_executable(polybar main.cpp)
+diff --git a/src/adapters/mpd.cpp b/src/adapters/mpd.cpp
+index 4a5438ad5..4e7ea59b8 100644
+--- a/src/adapters/mpd.cpp
++++ b/src/adapters/mpd.cpp
+@@ -382,7 +382,7 @@ namespace mpd {
+ 
+   void mpdstatus::fetch_data(mpdconnection* conn) {
+     m_status.reset(mpd_run_status(*conn));
+-    m_updated_at = chrono::system_clock::now();
++    m_updated_at = chrono::steady_clock::now();
+     m_songid = mpd_status_get_song_id(m_status.get());
+     m_queuelen = mpd_status_get_queue_length(m_status.get());
+     m_random = mpd_status_get_random(m_status.get());
+diff --git a/src/adapters/net.cpp b/src/adapters/net.cpp
+index 74702bab5..5b041c5e1 100644
+--- a/src/adapters/net.cpp
++++ b/src/adapters/net.cpp
+@@ -60,7 +60,7 @@ namespace net {
+     m_status.previous = m_status.current;
+     m_status.current.transmitted = 0;
+     m_status.current.received = 0;
+-    m_status.current.time = std::chrono::system_clock::now();
++    m_status.current.time = std::chrono::steady_clock::now();
+     m_status.ip = NO_IP;
+     m_status.ip6 = NO_IP;
+ 
+diff --git a/src/components/controller.cpp b/src/components/controller.cpp
+index a8ecdd107..389d5bb48 100644
+--- a/src/components/controller.cpp
++++ b/src/components/controller.cpp
+@@ -236,7 +236,7 @@ bool controller::enqueue(event&& evt) {
+ bool controller::enqueue(string&& input_data) {
+   if (!m_inputdata.empty()) {
+     m_log.trace("controller: Swallowing input event (pending data)");
+-  } else if (chrono::system_clock::now() - m_swallow_input < m_lastinput) {
++  } else if (chrono::steady_clock::now() - m_swallow_input < m_lastinput) {
+     m_log.trace("controller: Swallowing input event (throttled)");
+   } else {
+     m_inputdata = forward<string>(input_data);
+@@ -425,7 +425,7 @@ void controller::process_eventqueue() {
+ void controller::process_inputdata() {
+   if (!m_inputdata.empty()) {
+     string cmd = m_inputdata;
+-    m_lastinput = chrono::time_point_cast<decltype(m_swallow_input)>(chrono::system_clock::now());
++    m_lastinput = chrono::time_point_cast<decltype(m_swallow_input)>(chrono::steady_clock::now());
+     m_inputdata.clear();
+ 
+     for (auto&& handler : m_inputhandlers) {
+diff --git a/src/components/taskqueue.cpp b/src/components/taskqueue.cpp
+index b8418797d..45fbe61f4 100644
+--- a/src/components/taskqueue.cpp
++++ b/src/components/taskqueue.cpp
+@@ -22,7 +22,7 @@ taskqueue::taskqueue() {
+         for (auto&& task : m_deferred) {
+           auto when = task->now + task->wait;
+           if (when < wait) {
+-            wait = move(when);
++            wait = when;
+           }
+         }
+         if (wait > now) {
+@@ -48,8 +48,8 @@ taskqueue::~taskqueue() {
+ void taskqueue::defer(
+     string id, deferred::duration ms, deferred::callback fn, deferred::duration offset, size_t count) {
+   std::unique_lock<std::mutex> guard(m_lock);
+-  deferred::timepoint now{chrono::time_point_cast<deferred::duration>(deferred::clock::now() + move(offset))};
+-  m_deferred.emplace_back(make_unique<deferred>(move(id), move(now), move(ms), move(fn), move(count)));
++  deferred::timepoint now{chrono::time_point_cast<deferred::duration>(deferred::clock::now() + offset)};
++  m_deferred.emplace_back(make_unique<deferred>(move(id), now, ms, move(fn), count));
+   guard.unlock();
+   m_hold.notify_one();
+ }
+@@ -58,8 +58,8 @@ void taskqueue::defer_unique(
+     string id, deferred::duration ms, deferred::callback fn, deferred::duration offset, size_t count) {
+   purge(id);
+   std::unique_lock<std::mutex> guard(m_lock);
+-  deferred::timepoint now{chrono::time_point_cast<deferred::duration>(deferred::clock::now() + move(offset))};
+-  m_deferred.emplace_back(make_unique<deferred>(move(id), move(now), move(ms), move(fn), move(count)));
++  deferred::timepoint now{chrono::time_point_cast<deferred::duration>(deferred::clock::now() + offset)};
++  m_deferred.emplace_back(make_unique<deferred>(move(id), now, ms, move(fn), count));
+   guard.unlock();
+   m_hold.notify_one();
+ }
+diff --git a/src/drawtypes/animation.cpp b/src/drawtypes/animation.cpp
+index 607374435..70d460d79 100644
+--- a/src/drawtypes/animation.cpp
++++ b/src/drawtypes/animation.cpp
+@@ -24,7 +24,7 @@ namespace drawtypes {
+   }
+ 
+   void animation::tick() {
+-    auto now = chrono::system_clock::now();
++    auto now = chrono::steady_clock::now();
+     auto diff = chrono::duration_cast<chrono::milliseconds>(now - m_lastupdate);
+ 
+     if (diff.count() < m_framerate_ms) {
+diff --git a/src/modules/battery.cpp b/src/modules/battery.cpp
+index 1a898191f..8b6911e78 100644
+--- a/src/modules/battery.cpp
++++ b/src/modules/battery.cpp
+@@ -28,7 +28,7 @@ namespace modules {
+     // Load configuration values
+     m_fullat = math_util::min(m_conf.get(name(), "full-at", m_fullat), 100);
+     m_interval = m_conf.get<decltype(m_interval)>(name(), "poll-interval", 5s);
+-    m_lastpoll = chrono::system_clock::now();
++    m_lastpoll = chrono::steady_clock::now();
+ 
+     auto path_adapter = string_util::replace(PATH_ADAPTER, "%adapter%", m_conf.get(name(), "adapter", "ADP1"s)) + "/";
+     auto path_battery = string_util::replace(PATH_BATTERY, "%battery%", m_conf.get(name(), "battery", "BAT0"s)) + "/";
+@@ -183,7 +183,7 @@ namespace modules {
+    */
+   void battery_module::idle() {
+     if (m_interval.count() > 0) {
+-      auto now = chrono::system_clock::now();
++      auto now = chrono::steady_clock::now();
+       if (chrono::duration_cast<decltype(m_interval)>(now - m_lastpoll) > m_interval) {
+         m_lastpoll = now;
+         m_log.info("%s: Polling values (inotify fallback)", name());
+@@ -202,7 +202,7 @@ namespace modules {
+     auto percentage = current_percentage(state);
+ 
+     // Reset timer to avoid unnecessary polling
+-    m_lastpoll = chrono::system_clock::now();
++    m_lastpoll = chrono::steady_clock::now();
+ 
+     if (event != nullptr) {
+       m_log.trace("%s: Inotify event reported for %s", name(), event->filename);
+diff --git a/src/modules/mpd.cpp b/src/modules/mpd.cpp
+index 74feaac8e..e6ae0a47f 100644
+--- a/src/modules/mpd.cpp
++++ b/src/modules/mpd.cpp
+@@ -121,7 +121,7 @@ namespace modules {
+ 
+     // }}}
+ 
+-    m_lastsync = chrono::system_clock::now();
++    m_lastsync = chrono::steady_clock::now();
+ 
+     try {
+       m_mpd = factory_util::unique<mpdconnection>(m_log, m_host, m_port, m_pass);
+@@ -196,7 +196,7 @@ namespace modules {
+     }
+ 
+     if ((m_label_time || m_bar_progress) && m_status->match_state(mpdstate::PLAYING)) {
+-      auto now = chrono::system_clock::now();
++      auto now = chrono::steady_clock::now();
+       auto diff = now - m_lastsync;
+ 
+       if (chrono::duration_cast<chrono::milliseconds>(diff).count() > m_synctime * 1000) {

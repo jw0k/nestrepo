@@ -22,11 +22,13 @@ sha256sums=('9e37fa48a1027881f14546f2b4f6ace4c91d09a20a293685f845da9cbaedc4eb')
 
 prepare() {
   mkdir -p "polybar/build"
+  cd polybar
+  patch -p1 < ../../correct-time.patch
 }
 
 build() {
   cd "polybar/build" || exit 1
-  cmake -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr ..
+  cmake -DCMAKE_INSTALL_PREFIX=/usr ..
   cmake --build .
 }
 
