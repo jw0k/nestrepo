@@ -6,6 +6,7 @@
 !sxiv-large/myconfig.def.h
 !polybar-correct-time/PKGBUILD.patch
 !polybar-correct-time/correct-time.patch
+!lssecret/PKGBUILD
 !query_github.sh
 !release.json
 !release_to_github.sh

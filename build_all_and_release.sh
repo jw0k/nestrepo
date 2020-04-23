@@ -33,7 +33,7 @@ do
     package=${line%% *}
 
     echo "Building non-patched package: ${package}..."
-    pushd
+    pushd .
 
     cd ${SCRIPTDIR}/${package} || { popd; echo "Cannot cd to package ${package}"; exit 1; }
     makepkg -cCsf --sign || { popd; echo "Cannot build package ${package}"; exit 1; }

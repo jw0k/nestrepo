@@ -8,6 +8,7 @@ Modified Arch packages. And other packages, too.
 - networkmanager_auto - keeps trying to connect to WiFi even if it is started before gnome-keyring
 - sxiv-large - sxiv configured to display large thumbnails
 - polybar-correct-time - polybar with time module fixes (time wouldn't update after unhibernating)
+- lssecret - lists GNOME Keyring secrets
 
 ## Configuration
 

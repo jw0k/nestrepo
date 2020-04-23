@@ -12,3 +12,4 @@
 networkmanager_auto networkmanager
 sxiv-large sxiv
 polybar-correct-time polybar
+lssecret

@@ -1,0 +1,19 @@
+pkgname=lssecret
+pkgver=0.0.1
+pkgrel=1
+pkgdesc='Lists secrets from GNOME Keyring'
+arch=('x86_64')
+url='https://github.com/jw0k/lssecret'
+makedepends=('libsecret' 'pkgconf')
+source=('https://github.com/jw0k/lssecret/archive/master.tar.gz')
+sha256sums=('80b76fb9ab8831c1176701a1c88752a9fc567b37d7b2b8c3dad6778df47c18f2')
+
+build() {
+    cd lssecret-master
+    make
+}
+
+package() {
+    cd lssecret-master
+    DESTDIR="$pkgdir/usr" make install
+}
