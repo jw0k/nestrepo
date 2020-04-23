@@ -14,6 +14,12 @@ compare_versions()
     fi
 }
 
-compare_versions "sxiv" "sxiv-large"
-compare_versions "networkmanager" "networkmanager_auto"
-compare_versions "polybar" "polybar-correct-time"
+SCRIPTDIR=$(dirname "$(readlink -f "$0")")
+
+while IFS="" read -r line || [ -n "$line" ]
+do
+    modified=${line%% *}
+    vanilla=${line#* }
+    echo "comparing $vanilla with $modified"
+    compare_versions "$vanilla" "$modified"
+done < <(awk "/^[^#]/ && NF==2" ${SCRIPTDIR}/packages.txt)

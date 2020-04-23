@@ -1,0 +1,47 @@
+--- networkmanager/PKGBUILD	2020-04-22 14:35:17.000000000 +0200
++++ PKGBUILD	2020-04-21 21:08:07.762424562 +0200
+@@ -6,7 +6,7 @@
+ # Contributor: Valentine Sinitsyn <e_val@inbox.ru>
+ 
+ pkgbase=networkmanager
+-pkgname=(networkmanager libnm nm-cloud-setup)
++pkgname=(networkmanager_auto libnm nm-cloud-setup)
+ pkgver=1.22.10
+ pkgrel=1
+ pkgdesc="Network connection manager and user applications"
+@@ -30,6 +30,17 @@
+ 
+ prepare() {
+   cd NetworkManager
++
++  # NetworkManager jest uruchamiany przez systemd jeszcze przed uruchomieniem
++  # i odblokowaniem gnome-keyring'a. NetworkManager wyłącza dane połączenie
++  # z autoconnect'a jeśli nie jest w stanie pobrać sekretów z keyringa. Przez to
++  # po zalogowaniu, włączeniu i odblokowaniu keyringa, NetworkManager nie będzie
++  # podejmował kolejnych prób połączenia z internetem. Poniższy patch zmienia to
++  # zachowanie - NetworkManager po tej zmianie nadal będzie próbował uaktywnić
++  # dane połączenie nawet jeśli keyring jeszcze nie działa, pod warunkiem odpowiedniej
++  # konfiguracji połączenia (autoconnect-retries=0 w sekcji connection w pliku
++  # .nmconnection)
++  sed -i '/block_no_secrets = TRUE;/c\block_no_secrets = FALSE;' src/nm-policy.c
+ }
+ 
+ build() {
+@@ -84,7 +95,7 @@
+   done
+ }
+ 
+-package_networkmanager() {
++package_networkmanager_auto() {
+   depends=(libnm iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
+            bluez-libs libpsl audit mobile-broadband-provider-info)
+   optdepends=('dnsmasq: connection sharing'
+@@ -94,6 +105,8 @@
+               'iwd: wpa_supplicant alternative')
+   backup=(etc/NetworkManager/NetworkManager.conf)
+   groups=(gnome)
++  provides=('networkmanager')
++  conflicts=('networkmanager')
+ 
+   DESTDIR="$pkgdir" meson install -C build
+ 

@@ -1,0 +1,14 @@
+# Format:
+#
+# each line should contain:
+# modified_package vanilla_package
+#
+# or:
+# package
+#
+# The former adds a package with modified PKGBUILD.
+# The latter adds a package that is neither in Arch repositories nor in AUR (e.g. my own programs).
+
+networkmanager_auto networkmanager
+sxiv-large sxiv
+polybar-correct-time polybar
