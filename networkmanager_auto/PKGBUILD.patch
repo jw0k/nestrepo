@@ -1,14 +1,8 @@
---- networkmanager/PKGBUILD	2020-04-22 14:35:17.000000000 +0200
-+++ PKGBUILD	2020-04-21 21:08:07.762424562 +0200
-@@ -6,7 +6,7 @@
- # Contributor: Valentine Sinitsyn <e_val@inbox.ru>
- 
- pkgbase=networkmanager
+--- networkmanager/PKGBUILD	2020-05-08 23:58:25.000000000 +0200
++++ PKGBUILD	2020-05-10 20:28:34.875697120 +0200
+@@ -9,1 +9,1 @@
 -pkgname=(networkmanager libnm nm-cloud-setup)
 +pkgname=(networkmanager_auto libnm nm-cloud-setup)
- pkgver=1.22.10
- pkgrel=1
- pkgdesc="Network connection manager and user applications"
 @@ -30,6 +30,17 @@
  
  prepare() {
@@ -27,7 +21,7 @@
  }
  
  build() {
-@@ -84,7 +95,7 @@
+@@ -87,7 +98,7 @@
    done
  }
  
@@ -36,8 +30,8 @@
    depends=(libnm iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
             bluez-libs libpsl audit mobile-broadband-provider-info)
    optdepends=('dnsmasq: connection sharing'
-@@ -94,6 +105,8 @@
-               'iwd: wpa_supplicant alternative')
+@@ -99,6 +110,8 @@
+               'openresolv: alternative resolv.conf manager')
    backup=(etc/NetworkManager/NetworkManager.conf)
    groups=(gnome)
 +  provides=('networkmanager')

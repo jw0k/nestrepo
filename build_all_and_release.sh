@@ -18,10 +18,10 @@ do
 
     cd ${SCRIPTDIR}/${package} || { popd; echo "Cannot cd to package ${package}"; exit 1; }
     rm -rf ${vanilla}
-    pbget --aur ${vanilla} || { popd; echo "Cannot download PKGBUILD for ${vanilla}"; exit 1; }
+    pbget --pull --aur ${vanilla} || { popd; echo "Cannot download PKGBUILD for ${vanilla}"; exit 1; }
     mv ${vanilla}/* .
     rm -rf ${vanilla} .git
-    patch -p0 < PKGBUILD.patch || { popd; echo "Cannot patch package ${package}"; exit 1; }
+    patch -F 3 -p0 < PKGBUILD.patch || { popd; echo "Cannot patch package ${package}"; exit 1; }
     makepkg -cCsf --sign || { popd; echo "Cannot build package ${package}"; exit 1; }
 
     popd
