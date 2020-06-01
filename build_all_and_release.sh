@@ -22,7 +22,7 @@ do
     mv ${vanilla}/* .
     rm -rf ${vanilla} .git
     patch -F 3 -p0 < PKGBUILD.patch || { popd; echo "Cannot patch package ${package}"; exit 1; }
-    makepkg -cCsf --sign || { popd; echo "Cannot build package ${package}"; exit 1; }
+    makepkg -cCsf --sign --noconfirm || { popd; echo "Cannot build package ${package}"; exit 1; }
 
     popd
 done < <(awk "/^[^#]/ && NF==2" ${SCRIPTDIR}/packages.txt)
@@ -36,7 +36,7 @@ do
     pushd .
 
     cd ${SCRIPTDIR}/${package} || { popd; echo "Cannot cd to package ${package}"; exit 1; }
-    makepkg -cCsf --sign || { popd; echo "Cannot build package ${package}"; exit 1; }
+    makepkg -cCsf --sign --noconfirm || { popd; echo "Cannot build package ${package}"; exit 1; }
 
     popd
 done < <(awk "/^[^#]/ && NF==1" ${SCRIPTDIR}/packages.txt)
