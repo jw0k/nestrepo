@@ -1,0 +1,41 @@
+--- sxiv/PKGBUILD	2020-04-23 19:35:32.297919855 +0200
++++ PKGBUILD	2020-04-21 20:54:14.750222210 +0200
+@@ -4,28 +4,31 @@
+ # Contributor: Bert Muennich <muennich at informatik.hu-berlin.de>
+ # Contributor: Brad Fanella <bradfanella@archlinux.us>
+ 
+-pkgname=sxiv
++pkgname=sxiv-large
+ pkgver=26
+ pkgrel=1
+-pkgdesc='Simple X Image Viewer'
++pkgdesc='Simple X Image Viewer (with large thumbnails)'
+ arch=('x86_64')
+ license=('GPL2')
+ url='https://github.com/muennich/sxiv'
+ depends=('imlib2' 'desktop-file-utils' 'xdg-utils' 'hicolor-icon-theme' 'libexif' 'libxft')
+-source=("$pkgname-$pkgver.tar.gz"::"https://github.com/muennich/sxiv/archive/v$pkgver.tar.gz")
++source=("sxiv-$pkgver.tar.gz"::"https://github.com/muennich/sxiv/archive/v$pkgver.tar.gz")
+ md5sums=('969d086bff438ae882433f8729d2b95d')
++provides=('sxiv')
++conflicts=('sxiv')
+ 
+ prepare() {
+-  cd "$pkgname-$pkgver"
+-  ln -s config.def.h config.h
++  cp ../myconfig.def.h "sxiv-${pkgver}/myconfig.def.h"
++  cd "sxiv-$pkgver"
++  ln -s myconfig.def.h config.h
+ }
+ 
+ build() {
+-  make -C "$pkgname-$pkgver"
++  make -C "sxiv-$pkgver"
+ }
+ 
+ package() {
+-  cd "$pkgname-$pkgver"
++  cd "sxiv-$pkgver"
+   make PREFIX=/usr DESTDIR="$pkgdir" install
+   make -C icon PREFIX=/usr DESTDIR="$pkgdir" install
+   install -Dm644 sxiv.desktop "$pkgdir"/usr/share/applications/sxiv.desktop

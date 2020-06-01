@@ -1,0 +1,34 @@
+--- polybar/PKGBUILD	2020-04-23 18:55:16.682463438 +0200
++++ PKGBUILD	2020-04-21 21:26:14.901736143 +0200
+@@ -2,1 +2,1 @@
+-pkgname=polybar
++pkgname=polybar-correct-time
+@@ -15,4 +15,5 @@
+ makedepends=("cmake" "git" "python" "pkg-config" "python-sphinx" "i3-wm")
+-conflicts=("polybar-git")
+-install="${pkgname}.install"
++provides=("polybar")
++conflicts=("polybar-git" "polybar")
++install="polybar.install"
+ source=(${url}/releases/download/${pkgver}/polybar-${pkgver}.tar)
+@@ -21,14 +21,16 @@
+ prepare() {
+-  mkdir -p "${pkgname}/build"
++  mkdir -p "polybar/build"
++  cd polybar
++  patch -p1 < ../../correct-time.patch
+ }
+ 
+ build() {
+-  cd "${pkgname}/build" || exit 1
++  cd "polybar/build" || exit 1
+   cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+   cmake --build .
+ }
+ 
+ package() {
+-  cmake --build "${pkgname}/build" --target install -- DESTDIR="${pkgdir}"
+-  install -Dm644 "${pkgname}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
++  cmake --build "polybar/build" --target install -- DESTDIR="${pkgdir}"
++  install -Dm644 "polybar/LICENSE" "${pkgdir}/usr/share/licenses/polybar/LICENSE"
+ }
