@@ -1,5 +1,4 @@
 *
-
 !.gitignore
 !networkmanager_auto/PKGBUILD.patch
 !sxiv-large/PKGBUILD.patch
@@ -7,6 +6,8 @@
 !polybar-correct-time/PKGBUILD.patch
 !polybar-correct-time/correct-time.patch
 !lssecret/PKGBUILD
+!i3blocks-fixed/bdb7d6a013a23c43c4891e3543397332c4f03828.patch
+!i3blocks-fixed/PKGBUILD.patch
 !query_github.sh
 !release.json
 !release_to_github.sh

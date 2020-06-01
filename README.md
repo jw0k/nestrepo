@@ -9,6 +9,7 @@ Modified Arch packages. And other packages, too.
 - sxiv-large - sxiv configured to display large thumbnails
 - polybar-correct-time - polybar with time module fixes (time wouldn't update after unhibernating)
 - lssecret - lists GNOME Keyring secrets
+- i3blocks-fixed - i3blocks with "persistent" bug fix (blocks with interval=persist would sometimes freeze)
 
 ## Configuration
 

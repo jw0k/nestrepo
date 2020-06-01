@@ -1,0 +1,36 @@
+From bdb7d6a013a23c43c4891e3543397332c4f03828 Mon Sep 17 00:00:00 2001
+From: zsugabubus <zsugabubus@users.noreply.github.com>
+Date: Sun, 3 May 2020 19:18:59 +0200
+Subject: [PATCH] block: always drain stdout
+
+If input is not being read until `EAGAIN`, we will not get informed
+(signaled) when further input arrives.
+---
+ block.c | 10 ++--------
+ 1 file changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/block.c b/block.c
+index c24fb0a..d94ff25 100644
+--- a/block.c
++++ b/block.c
+@@ -94,18 +94,12 @@ static int block_stdout(struct block *block)
+ 	const char *label, *full_text;
+ 	int out = block->out[0];
+ 	char buf[BUFSIZ];
+-	size_t count;
+ 	int err;
+ 
+-	if (block->interval == INTERVAL_PERSIST)
+-		count = 1;
+-	else
+-		count = -1; /* SIZE_MAX */
+-
+ 	if (block->format == FORMAT_JSON)
+-		err = json_read(out, count, block->env);
++		err = json_read(out, -1, block->env);
+ 	else
+-		err = i3bar_read(out, count, block->env);
++		err = i3bar_read(out, -1, block->env);
+ 
+ 	if (err && err != -EAGAIN)
+ 		return err;

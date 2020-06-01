@@ -1,0 +1,35 @@
+--- PKGBUILD	2019-09-09 03:22:14.000000000 +0200
++++ PKGBUILD.new	2020-06-01 23:34:08.598629368 +0200
+@@ -6,1 +6,1 @@
+-pkgname=i3blocks
++pkgname=i3blocks-fixed
+@@ -13,20 +13,26 @@
+ license=('GPL3')
+ makedepends=('git')
+ depends=('glibc')
+-source=("${pkgname}-${pkgver}::git+https://github.com/vivien/${pkgname}#tag=${pkgver}?signed")
++source=("i3blocks-${pkgver}::git+https://github.com/vivien/i3blocks#tag=${pkgver}?signed")
+ sha512sums=('SKIP')
+ backup=('etc/i3blocks.conf')
+ validpgpkeys=('44C919BDF206CFDC49C7101A66C63FBDFD79670A')
+ install=i3blocks.install
++provides=('i3blocks')
++conflicts=('i3blocks')
+ 
+ build () {
+-  cd "${pkgname}-${pkgver}"
++  cd "i3blocks-${pkgver}"
++  patch -p1 < ../../bdb7d6a013a23c43c4891e3543397332c4f03828.patch
+   ./autogen.sh
+   ./configure --prefix=/usr --libexecdir=/usr/lib --sysconfdir=/etc
+   make VERSION="${pkgver}"
+ }
+ 
+ package () {
+-  cd "${pkgname}-${pkgver}"
++  cd "i3blocks-${pkgver}"
++  # install bash-completion - broken in version 1.5
++  mkdir -p $pkgdir/usr/share/bash-completion/completions
++  install -c -m 644 bash-completion $pkgdir/usr/share/bash-completion/completions/bash-completion
+   make VERSION="${pkgver}" DESTDIR="${pkgdir}" install
+ }
