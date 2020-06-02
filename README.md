@@ -27,6 +27,7 @@ Just install a package you want with `pacman -Syu package`.
 ## Scripts for development
 
 - check_for_new_versions.sh - checks if there are newer versions of vanilla packages in Arch/AUR repositories. Update your system before running this script
-- release_to_github.sh - uploads packages to GitHub. You should build all packages before running this script
-- build_all_and_release.sh - automates all the steps necessary to build all the packages and release them to GitHub
+- build_all.sh - builds all packages from `packages.txt` into the `build` folder
+- release_to_github.sh - uploads all packages from `packages.txt` to GitHub provided that they are already built in the `build` folder. You should build all packages before running this script
+- build_all_and_release.sh - automates all the steps necessary to build all the packages from `packages.txt` and release them to GitHub
 
