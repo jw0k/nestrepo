@@ -10,6 +10,7 @@ Modified Arch packages. And other packages, too.
 - polybar-correct-time - polybar with time module fixes (time wouldn't update after unhibernating)
 - lssecret - lists GNOME Keyring secrets
 - i3blocks-fixed - i3blocks with "persistent" bug fix (blocks with interval=persist would sometimes freeze)
+- mads - multi-pass crossassembler designed for 6502 and 65816 processors
 
 ## Configuration
 

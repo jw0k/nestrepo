@@ -14,3 +14,4 @@ sxiv-large sxiv
 polybar-correct-time polybar
 lssecret
 i3blocks-fixed i3blocks
+mads
