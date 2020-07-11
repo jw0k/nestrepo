@@ -1,0 +1,26 @@
+--- PKGBUILD_orig	2020-04-23 20:38:13.000000000 +0200
++++ PKGBUILD	2020-07-12 00:09:08.937324677 +0200
+@@ -20,10 +20,12 @@
+ groups=(i3)
+ replaces=(i3 i3bar)
+ source=("https://i3wm.org/downloads/i3-$pkgver.tar.bz2"{,.asc}
+-        0001-Use-OVER-operator-for-drawing-text.patch)
++        0001-Use-OVER-operator-for-drawing-text.patch
++        outputs.patch)
+ sha256sums=('9abf90fa803f2cb8e53e3bc8c952eba48c43463083608e4107fc53ab224be07c'
+             'SKIP'
+-            'e49e147b1cd06f95188decbbe41f5c3a0aca18d0195750bc3ea16465b4aca563')
++            'e49e147b1cd06f95188decbbe41f5c3a0aca18d0195750bc3ea16465b4aca563'
++            '534a70010a2d1f12724144055d13e71540f98c91346e315add1e64cdba4ffad3')
+ validpgpkeys=('424E14D703E7C6D43D9D6F364E7160ED4AC8EE1D') # Michael Stapelberg
+ 
+ prepare() {
+@@ -33,6 +35,8 @@
+   # https://github.com/i3/i3/pull/2925
+   patch -Np1 -i ../0001-Use-OVER-operator-for-drawing-text.patch
+ 
++  patch -p0 -i ../outputs.patch
++
+   autoreconf -fvi
+ }
+ 

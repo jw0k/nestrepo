@@ -11,6 +11,7 @@ Modified Arch packages. And other packages, too.
 - lssecret - lists GNOME Keyring secrets
 - i3blocks-fixed - i3blocks with "persistent" bug fix (blocks with interval=persist would sometimes freeze)
 - mads - multi-pass crossassembler designed for 6502 and 65816 processors
+- i3-wm-non-primary - i3 window manager with i3bar that supports non-primary option (displays a bar on all non-primary screens)
 
 ## Configuration
 

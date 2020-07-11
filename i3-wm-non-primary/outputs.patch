@@ -1,0 +1,13 @@
+--- i3bar/src/outputs.c	2020-07-11 23:55:51.031014009 +0200
++++ i3bar/src/outputs.c	2020-07-11 23:51:24.339865273 +0200
+@@ -197,7 +197,9 @@
+         for (int c = 0; c < config.num_outputs; c++) {
+             if (strcasecmp(params->outputs_walk->name, config.outputs[c]) == 0 ||
+                 (strcasecmp(config.outputs[c], "primary") == 0 &&
+-                 params->outputs_walk->primary)) {
++                 params->outputs_walk->primary) ||
++                (strcasecmp(config.outputs[c], "non-primary") == 0 &&
++                 !params->outputs_walk->primary)) {
+                 handle_output = true;
+                 break;
+             }
