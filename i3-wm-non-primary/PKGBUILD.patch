@@ -1,5 +1,5 @@
 --- PKGBUILD	2020-04-23 20:38:13.000000000 +0200
-+++ PKGBUILD.new	2020-07-12 15:42:56.751253747 +0200
++++ PKGBUILD.new	2020-07-12 15:58:05.150132708 +0200
 @@ -1,6 +1,6 @@
  # Maintainer: Thorsten Töpper <atsutane-tu@freethoughts.de>
  
@@ -8,7 +8,7 @@
  pkgver=4.18.1
  pkgrel=1
  pkgdesc="An improved dynamic tiling window manager"
-@@ -20,10 +20,12 @@
+@@ -20,11 +20,15 @@
  groups=(i3)
  replaces=(i3 i3bar)
  source=("https://i3wm.org/downloads/i3-$pkgver.tar.bz2"{,.asc}
@@ -21,9 +21,12 @@
 +            'e49e147b1cd06f95188decbbe41f5c3a0aca18d0195750bc3ea16465b4aca563'
 +            '534a70010a2d1f12724144055d13e71540f98c91346e315add1e64cdba4ffad3')
  validpgpkeys=('424E14D703E7C6D43D9D6F364E7160ED4AC8EE1D') # Michael Stapelberg
++provides=('i3-wm')
++conflicts=('i3-wm')
  
  prepare() {
-@@ -33,6 +35,8 @@
+   mkdir build
+@@ -33,6 +37,8 @@
    # https://github.com/i3/i3/pull/2925
    patch -Np1 -i ../0001-Use-OVER-operator-for-drawing-text.patch
  
@@ -32,7 +35,7 @@
    autoreconf -fvi
  }
  
-@@ -46,7 +50,7 @@
+@@ -46,7 +52,7 @@
    cd build
    make DESTDIR="$pkgdir" install
    install -Dt "$pkgdir/usr/share/man/man1" -m644 man/*.1
