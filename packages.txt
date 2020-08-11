@@ -14,5 +14,5 @@ sxiv-large sxiv
 polybar-correct-time polybar
 lssecret
 i3blocks-fixed i3blocks
-mads
+mads-fixed
 i3-wm-non-primary i3-wm

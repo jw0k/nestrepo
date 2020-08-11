@@ -1,6 +1,6 @@
-pkgname=mads
+pkgname=mads-fixed
 pkgver=2.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Multi-pass crossassembler designed for 6502 and 65816 processors"
 arch=('x86_64')
 url='https://github.com/tebe6502/Mad-Assembler'
@@ -9,6 +9,7 @@ sha256sums=('bba2aa102e41d131adec6f01bb525e874ea6cdb3769f9a31426419587e87d7fa')
 
 license=('unknown')
 provides=('mads')
+conflicts=('mads')
 depends=('glibc')
 makedepends=('fpc')
 
