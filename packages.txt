@@ -16,3 +16,4 @@ lssecret
 i3blocks-fixed i3blocks
 mads-fixed
 i3-wm-non-primary i3-wm
+boost-1.72
