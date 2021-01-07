@@ -11,9 +11,9 @@
 
 networkmanager_auto networkmanager
 sxiv-large sxiv
-polybar-correct-time polybar
+# polybar-correct-time polybar
 lssecret
 i3blocks-fixed i3blocks
 mads-fixed
-i3-wm-non-primary i3-wm
+# i3-wm-non-primary i3-wm
 boost-1.72

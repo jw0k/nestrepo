@@ -7,11 +7,11 @@ Modified Arch packages. And other packages, too.
 
 - networkmanager_auto - keeps trying to connect to WiFi even if it is started before gnome-keyring
 - sxiv-large - sxiv configured to display large thumbnails
-- polybar-correct-time - polybar with time module fixes (time wouldn't update after unhibernating)
+- ~~polybar-correct-time - polybar with time module fixes (time wouldn't update after unhibernating)~~
 - lssecret - lists GNOME Keyring secrets
 - i3blocks-fixed - i3blocks with "persistent" bug fix (blocks with interval=persist would sometimes freeze)
 - mads-fixed - multi-pass crossassembler designed for 6502 and 65816 processors
-- i3-wm-non-primary - i3 window manager with i3bar that supports non-primary option (displays a bar on all non-primary screens)
+- ~~i3-wm-non-primary - i3 window manager with i3bar that supports non-primary option (displays a bar on all non-primary screens)~~
 - boost-1.72
 
 ## Configuration
