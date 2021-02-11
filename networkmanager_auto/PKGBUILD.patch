@@ -17,7 +17,7 @@
 +  # dane połączenie nawet jeśli keyring jeszcze nie działa, pod warunkiem odpowiedniej
 +  # konfiguracji połączenia (autoconnect-retries=0 w sekcji connection w pliku
 +  # .nmconnection)
-+  sed -i '/block_no_secrets = TRUE;/c\block_no_secrets = FALSE;' src/nm-policy.c
++  sed -i '0,/blocked = TRUE;/s//blocked = FALSE;/' src/nm-policy.c
  }
  
  build() {
