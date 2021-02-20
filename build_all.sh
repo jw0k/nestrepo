@@ -17,6 +17,7 @@ done < <(awk '/^[^#]/ {print $1}' ${SCRIPTDIR}/packages.txt)
 PATCHED_PACKAGES=$(awk '/^[^#]/ && NF==2' ${SCRIPTDIR}/packages.txt)
 while IFS="" read -r line || [ -n "$line" ]
 do
+    [ -z "$line" ] && continue
     package=${line%% *}
     vanilla=${line#* }
 
@@ -36,6 +37,7 @@ done <<< "$PATCHED_PACKAGES"
 # Step 1b: build patched packages
 while IFS="" read -r line || [ -n "$line" ]
 do
+    [ -z "$line" ] && continue
     package=${line%% *}
 
     echo "====================================================================="
@@ -53,6 +55,7 @@ done <<< "$PATCHED_PACKAGES"
 NON_PATCHED_PACKAGES=$(awk '/^[^#]/ && NF==1' ${SCRIPTDIR}/packages.txt)
 while IFS="" read -r line || [ -n "$line" ]
 do
+    [ -z "$line" ] && continue
     package=${line%% *}
 
     echo "====================================================================="

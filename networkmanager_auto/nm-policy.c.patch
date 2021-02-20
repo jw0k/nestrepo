@@ -1,0 +1,24 @@
+diff --git a/src/core/nm-policy.c b/src/core/nm-policy.c
+index db4983f88..e274b2e5b 100644
+--- a/src/core/nm-policy.c
++++ b/src/core/nm-policy.c
+@@ -1961,13 +1961,13 @@ device_state_changed(NMDevice *          device,
+                 con_v = nm_settings_connection_get_last_secret_agent_version_id(sett_conn);
+                 if (con_v == 0 || con_v == nm_agent_manager_get_agent_version_id(priv->agent_mgr)) {
+                     _LOGD(LOGD_DEVICE,
+-                          "connection '%s' now blocked from autoconnect due to no secrets",
++                          "connection '%s' now blocked (well, not really) from autoconnect due to no secrets",
+                           nm_settings_connection_get_id(sett_conn));
+-                    nm_settings_connection_autoconnect_blocked_reason_set(
+-                        sett_conn,
+-                        NM_SETTINGS_AUTO_CONNECT_BLOCKED_REASON_NO_SECRETS,
+-                        TRUE);
+-                    blocked = TRUE;
++                    // nm_settings_connection_autoconnect_blocked_reason_set(
++                    //    sett_conn,
++                    //    NM_SETTINGS_AUTO_CONNECT_BLOCKED_REASON_NO_SECRETS,
++                    //    TRUE);
++                    blocked = FALSE;
+                 }
+             } else if (nm_device_state_reason_check(reason)
+                        == NM_DEVICE_STATE_REASON_DEPENDENCY_FAILED) {
